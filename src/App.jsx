@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import InputPage from './pages/InputPage'
 import PlanPage from './pages/PlanPage'
 import './index.css'
@@ -17,8 +18,18 @@ export default function App() {
   }
 
   if (plan) {
-    return <PlanPage plan={plan} onBack={handleBack} />
+    return (
+      <>
+        <PlanPage plan={plan} onBack={handleBack} />
+        <Analytics />
+      </>
+    )
   }
 
-  return <InputPage onGenerate={handleGenerate} />
+  return (
+    <>
+      <InputPage onGenerate={handleGenerate} />
+      <Analytics />
+    </>
+  )
 }
