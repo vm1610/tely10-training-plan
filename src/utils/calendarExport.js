@@ -203,9 +203,13 @@ export function openCalendar(plan) {
       // webcal:// → Calendar.app opens and prompts "Subscribe to Tely 10 Training Plan?"
       window.location.href = `webcal://${window.location.host}/api/calendar${qs}`
       return 'webcal'
+    } else if (platform === 'android') {
+      // Direct navigation on Android: Chrome intercepts the attachment response, downloads
+      // the .ics, and shows an "OPEN" button → Android asks "Open with Google Calendar / Outlook?"
+      window.location.href = `${window.location.origin}/api/calendar${qs}`
+      return 'download'
     } else {
-      // Android + desktop: open the HTTPS API URL in a new tab → browser downloads .ics.
-      // On Android: tap the downloaded file → choose Outlook (or any calendar app) to import.
+      // Desktop: new tab so the user doesn't lose their plan page.
       window.open(`${window.location.origin}/api/calendar${qs}`, '_blank')
       return 'download'
     }
