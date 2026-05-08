@@ -187,15 +187,14 @@ export function openCalendar(plan) {
     const encoded = btoa(JSON.stringify(inputs))
     const qs = `?p=${encodeURIComponent(encoded)}`
 
-    if (platform === 'ios' || platform === 'mac') {
-      // webcal:// → Calendar.app opens and prompts "Subscribe to Tely 10 Training Plan?"
+    if (platform === 'ios' || platform === 'mac' || platform === 'android') {
+      // webcal:// works on iOS, macOS, AND Android (Google Calendar handles webcal:// natively).
+      // On Android: system asks "Open with Google Calendar?" → Subscribe → all events added.
+      // Avoids the "unable to launch event" error from parsing .ics files via intent.
       window.location.href = `webcal://${window.location.host}/api/calendar${qs}`
       return 'webcal'
     } else {
-      // Android / desktop: open the HTTPS API URL in a new tab.
-      // Chrome downloads the .ics (Content-Disposition: attachment) without
-      // navigating away from the plan page.  Tap the download notification
-      // → Google Calendar / default calendar asks to import.
+      // Desktop Chrome/Firefox: open the HTTPS URL in a new tab → browser downloads .ics.
       window.open(`${window.location.origin}/api/calendar${qs}`, '_blank')
       return 'download'
     }
