@@ -173,8 +173,9 @@ export function openCalendar(plan) {
   const isLocal = window.location.hostname === 'localhost' ||
                   window.location.hostname === '127.0.0.1'
 
-  // iOS + macOS on production: use webcal:// for direct Calendar.app prompt
-  if (!isLocal && (platform === 'ios' || platform === 'mac')) {
+  if (!isLocal) {
+    // On production: all platforms use the real API URL so there's no blob navigation issue.
+    // Build the query string once.
     const inputs = {
       inputType:    plan.inputType,
       inputSecs:    plan.inputSecs,
@@ -184,12 +185,23 @@ export function openCalendar(plan) {
       age:          plan.age,
     }
     const encoded = btoa(JSON.stringify(inputs))
-    const webcalUrl = `webcal://${window.location.host}/api/calendar?p=${encodeURIComponent(encoded)}`
-    window.location.href = webcalUrl
-    return 'webcal'
+    const qs = `?p=${encodeURIComponent(encoded)}`
+
+    if (platform === 'ios' || platform === 'mac') {
+      // webcal:// → Calendar.app opens and prompts "Subscribe to Tely 10 Training Plan?"
+      window.location.href = `webcal://${window.location.host}/api/calendar${qs}`
+      return 'webcal'
+    } else {
+      // Android / desktop: open the HTTPS API URL in a new tab.
+      // Chrome downloads the .ics (Content-Disposition: attachment) without
+      // navigating away from the plan page.  Tap the download notification
+      // → Google Calendar / default calendar asks to import.
+      window.open(`${window.location.origin}/api/calendar${qs}`, '_blank')
+      return 'download'
+    }
   }
 
-  // Android + desktop + local dev: download ICS
+  // Local dev fallback: blob download
   const icsContent = generateICSContent(plan)
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' })
   const url = URL.createObjectURL(blob)
