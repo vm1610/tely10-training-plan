@@ -111,8 +111,20 @@ function buildRaceDescription() {
 
 // ─── ICS generation (also exported for use in api/calendar.js) ───────────────
 
+function formatDTSTAMP(ms) {
+  const d = new Date(ms)
+  const y = d.getUTCFullYear()
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const dy = String(d.getUTCDate()).padStart(2, '0')
+  const h = String(d.getUTCHours()).padStart(2, '0')
+  const mi = String(d.getUTCMinutes()).padStart(2, '0')
+  const s = String(d.getUTCSeconds()).padStart(2, '0')
+  return `${y}${mo}${dy}T${h}${mi}${s}Z`
+}
+
 export function generateICSContent(plan) {
   const ts = Date.now()
+  const dtstamp = formatDTSTAMP(ts)
   const lines = []
 
   lines.push('BEGIN:VCALENDAR')
@@ -121,7 +133,6 @@ export function generateICSContent(plan) {
   lines.push('CALSCALE:GREGORIAN')
   lines.push('METHOD:PUBLISH')
   lines.push('X-WR-CALNAME:Tely 10 Training Plan')
-  lines.push('X-WR-TIMEZONE:America/St_Johns')
 
   plan.weeks.forEach(week => {
     const dates = getWeekRunDates(week, plan)
@@ -137,6 +148,7 @@ export function generateICSContent(plan) {
 
       lines.push('BEGIN:VEVENT')
       lines.push(`UID:${uid}`)
+      lines.push(`DTSTAMP:${dtstamp}`)
       lines.push(`DTSTART;VALUE=DATE:${formatDateICS(runDate)}`)
       lines.push(`DTEND;VALUE=DATE:${formatDateICS(addDays(runDate, 1))}`)
       lines.push(`SUMMARY:${escapeICS(summary)}`)
@@ -187,14 +199,13 @@ export function openCalendar(plan) {
     const encoded = btoa(JSON.stringify(inputs))
     const qs = `?p=${encodeURIComponent(encoded)}`
 
-    if (platform === 'ios' || platform === 'mac' || platform === 'android') {
-      // webcal:// works on iOS, macOS, AND Android (Google Calendar handles webcal:// natively).
-      // On Android: system asks "Open with Google Calendar?" → Subscribe → all events added.
-      // Avoids the "unable to launch event" error from parsing .ics files via intent.
+    if (platform === 'ios' || platform === 'mac') {
+      // webcal:// → Calendar.app opens and prompts "Subscribe to Tely 10 Training Plan?"
       window.location.href = `webcal://${window.location.host}/api/calendar${qs}`
       return 'webcal'
     } else {
-      // Desktop Chrome/Firefox: open the HTTPS URL in a new tab → browser downloads .ics.
+      // Android + desktop: open the HTTPS API URL in a new tab → browser downloads .ics.
+      // On Android: tap the downloaded file → choose Outlook (or any calendar app) to import.
       window.open(`${window.location.origin}/api/calendar${qs}`, '_blank')
       return 'download'
     }
