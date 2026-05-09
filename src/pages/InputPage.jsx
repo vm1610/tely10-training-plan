@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { generatePlan } from '../utils/planGenerator'
 
 const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -27,7 +26,7 @@ function getDefaultStartDate() {
 
 const DEFAULT_START = getDefaultStartDate()
 
-export default function InputPage({ onGenerate }) {
+export default function InputPage({ onSubmit }) {
   const [inputType, setInputType]   = useState('new')
   const [hours, setHours]           = useState('')
   const [minutes, setMinutes]       = useState('')
@@ -79,7 +78,7 @@ export default function InputPage({ onGenerate }) {
     const totalSecs = inputType === 'new' ? 0
       : (parseInt(hours || 0) * 3600) + (parseInt(minutes || 0) * 60) + parseInt(seconds || 0)
 
-    const plan = generatePlan({
+    onSubmit({
       inputType,
       inputSecs: totalSecs,
       trainingDays: selectedDays,
@@ -87,8 +86,6 @@ export default function InputPage({ onGenerate }) {
       startDate,
       age: parseInt(age),
     })
-
-    onGenerate(plan)
   }
 
   // ─── Styles ─────────────────────────────────────────────────────────────────
