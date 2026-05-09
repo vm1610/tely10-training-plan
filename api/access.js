@@ -1,7 +1,7 @@
 // api/access.js — free-slot counter backed by Vercel KV
 import { kv } from '@vercel/kv'
 
-const FREE_LIMIT = parseInt(process.env.FREE_LIMIT ?? '10')
+const FREE_LIMIT = parseInt(process.env.FREE_LIMIT ?? '20')
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
