@@ -199,9 +199,13 @@ export function openCalendar(plan) {
     const encoded = btoa(JSON.stringify(inputs))
     const qs = `?p=${encodeURIComponent(encoded)}`
 
-    if (platform === 'ios' || platform === 'mac') {
-      // webcal:// → Calendar.app opens and prompts "Subscribe to Tely 10 Training Plan?"
+    if (platform === 'ios') {
+      // iOS: navigate current tab — iOS intercepts webcal:// without leaving the page
       window.location.href = `webcal://${window.location.host}/api/calendar${qs}`
+      return 'webcal'
+    } else if (platform === 'mac') {
+      // Mac: open in new tab so plan page stays visible; browser hands off to Calendar.app
+      window.open(`webcal://${window.location.host}/api/calendar${qs}`, '_blank')
       return 'webcal'
     } else if (platform === 'android') {
       // Direct navigation on Android: Chrome intercepts the attachment response, downloads
