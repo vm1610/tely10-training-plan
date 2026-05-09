@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import InputPage from './pages/InputPage'
 import PlanPage from './pages/PlanPage'
 import PaywallPage from './pages/PaywallPage'
@@ -6,37 +6,49 @@ import { generatePlan } from './utils/planGenerator'
 import './index.css'
 
 const PAID_TOKEN = 'tely10plan2026'
-const ACCESS_KEY = 'tely10_access'
+const ACCESS_KEY  = 'tely10_access'
 const PENDING_KEY = 'tely10_pending'
 
 export default function App() {
-  const [page, setPage] = useState('input')
-  const [plan, setPlan] = useState(null)
+  const [page, setPage]               = useState('input')
+  const [plan, setPlan]               = useState(null)
   const [justUnlocked, setJustUnlocked] = useState(false)
+  const [storedInputs, setStoredInputs] = useState(null)
+  const submitted = useRef(false)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+    const params    = new URLSearchParams(window.location.search)
     const paidParam = (params.get('paid') || '').trim()
+    if (paidParam !== PAID_TOKEN) return
 
-    if (paidParam === PAID_TOKEN) {
-      localStorage.setItem(ACCESS_KEY, '1')
-      window.history.replaceState({}, '', window.location.pathname)
+    localStorage.setItem(ACCESS_KEY, '1')
+    window.history.replaceState({}, '', window.location.pathname)
 
-      const pending = localStorage.getItem(PENDING_KEY)
-      if (pending) {
-        localStorage.removeItem(PENDING_KEY)
-        try {
-          const inputs = JSON.parse(pending)
-          const generatedPlan = generatePlan(inputs)
-          setPlan(generatedPlan)
-          setPage('plan')
-          return
-        } catch {}
-      }
-      // Pending inputs missing or failed — show InputPage with unlocked banner
-      setJustUnlocked(true)
+    const raw = localStorage.getItem(PENDING_KEY)
+    if (raw) {
+      localStorage.removeItem(PENDING_KEY)
+      try {
+        const parsed = JSON.parse(raw)
+        const inputs = {
+          inputType:    parsed.inputType,
+          inputSecs:    Number(parsed.inputSecs),
+          trainingDays: Array.isArray(parsed.trainingDays) ? parsed.trainingDays : [],
+          longRunDay:   parsed.longRunDay,
+          startDate:    parsed.startDate,
+          age:          Number(parsed.age),
+        }
+        setStoredInputs(inputs)
+      } catch {}
     }
+    setJustUnlocked(true)
   }, [])
+
+  // Auto-submit once storedInputs is ready — runs after first render
+  useEffect(() => {
+    if (!storedInputs || submitted.current) return
+    submitted.current = true
+    handleSubmit(storedInputs)
+  }, [storedInputs])
 
   async function handleSubmit(inputs) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -46,7 +58,7 @@ export default function App() {
 
     if (!hasAccess) {
       try {
-        const res = await fetch('/api/access')
+        const res  = await fetch('/api/access')
         const data = await res.json()
         if (!data.free) {
           localStorage.setItem(PENDING_KEY, JSON.stringify(inputs))
@@ -60,7 +72,8 @@ export default function App() {
     }
 
     try {
-      setPlan(generatePlan(inputs))
+      const generated = generatePlan(inputs)
+      setPlan(generated)
       setPage('plan')
     } catch {
       setPage('input')
@@ -70,6 +83,8 @@ export default function App() {
   function handleBack() {
     setPlan(null)
     setJustUnlocked(false)
+    setStoredInputs(null)
+    submitted.current = false
     setPage('input')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -91,7 +106,7 @@ export default function App() {
 
   return (
     <>
-      {justUnlocked && (
+      {justUnlocked && !storedInputs && (
         <div style={{
           background: '#0d2b1f', borderBottom: '1px solid #00d4aa',
           padding: '12px 20px', textAlign: 'center',
